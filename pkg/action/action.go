@@ -88,11 +88,11 @@ func (j *Job) ID() string {
 // Run execute action
 func (j *Job) Run(ctx context.Context) error {
 	v, err := cuex.CompileStringWithOptions(ctx, j.template, cuex.WithExtraData("parameter", j.properties), cuex.WithExtraData("context", j.context))
+	s, _ := util.ToString(v)
+	fmt.Println("===========", s)
 	if err != nil {
 		return err
 	}
-	s, _ := util.ToString(v)
-	fmt.Println("===========", s)
 	if v.Err() != nil {
 		return v.Err()
 	}
