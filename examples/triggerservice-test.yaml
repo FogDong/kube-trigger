@@ -1,0 +1,23 @@
+apiVersion: standard.oam.dev/v1alpha1
+kind: TriggerService
+metadata:
+  name: test
+  namespace: default
+spec:
+  worker:
+    properties:
+      image: somefive/kube-trigger:ddde9
+  triggers:
+    - source:
+        type: resource-watcher
+        properties:
+          apiVersion: apps.kruise.io/v1alpha1
+          kind: CloneSet
+          events:
+            - update
+      filter: context.data.status.readyReplicas == context.data.status.replicas
+      action:
+        type: record-event
+        properties:
+          name:
+            fromLabel: "workflowrun.oam.dev/name"
