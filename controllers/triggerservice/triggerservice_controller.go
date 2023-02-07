@@ -41,6 +41,7 @@ import (
 	"github.com/kubevela/kube-trigger/controllers/utils"
 	"github.com/kubevela/kube-trigger/pkg/templates"
 	"github.com/kubevela/pkg/cue/cuex"
+	"github.com/kubevela/pkg/cue/util"
 )
 
 // Reconciler reconciles a TriggerService object.
@@ -130,6 +131,8 @@ func (r *Reconciler) createWorker(ctx context.Context, ts *standardv1alpha1.Trig
 	if err != nil {
 		return err
 	}
+	s, _ := util.ToString(v)
+	fmt.Println("=======", s)
 	if err := r.createRoles(ctx, ts, v); err != nil {
 		return err
 	}

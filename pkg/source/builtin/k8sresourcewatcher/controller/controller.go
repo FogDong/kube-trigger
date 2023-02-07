@@ -87,7 +87,7 @@ func Setup(ctx context.Context, conf *rest.Config, ctrlConf types.Config, eh []e
 	if err != nil {
 		logrus.WithField("source", v1alpha1.SourceTypeResourceWatcher).Fatal(err)
 	}
-	dynamicClient, err := dynamic.NewForConfig(ctrl.GetConfigOrDie())
+	dynamicClient, err := dynamic.NewForConfig(conf)
 	if err != nil {
 		logrus.WithField("source", v1alpha1.SourceTypeResourceWatcher).Fatal(err)
 	}

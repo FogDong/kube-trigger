@@ -4,12 +4,15 @@ metadata:
   name: record-event
   namespace: default
 spec:
+  worker:
+    properties:
+      image: somefive/kube-trigger:8a425
   triggers:
     - source:
         type: resource-watcher
         properties:
-          apiVersion: apps/v1
-          kind: Deployment
+          apiVersion: apps.kruise.io/v1alpha1
+          kind: CloneSet
           events:
             - update
       filter: context.data.status.readyReplicas == context.data.status.replicas
