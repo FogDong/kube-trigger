@@ -99,7 +99,6 @@ func (w *K8sResourceWatcher) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("================")
 		for _, kubeConfig := range configs {
 			go func(kube *rest.Config, c *types.Config, handlers []eventhandler.EventHandler) {
 				fmt.Println("======", kube.Host, "======")

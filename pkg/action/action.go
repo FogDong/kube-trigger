@@ -18,9 +18,11 @@ package action
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/kubevela/pkg/cue/cuex"
+	"github.com/kubevela/pkg/cue/util"
 	"github.com/mitchellh/hashstructure/v2"
 
 	"github.com/kubevela/kube-trigger/api/v1alpha1"
@@ -89,6 +91,8 @@ func (j *Job) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	s, _ := util.ToString(v)
+	fmt.Println("===========", s)
 	if v.Err() != nil {
 		return v.Err()
 	}

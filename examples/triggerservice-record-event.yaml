@@ -6,7 +6,7 @@ metadata:
 spec:
   worker:
     properties:
-      image: somefive/kube-trigger:8a425
+      image: somefive/kube-trigger:1d577
   triggers:
     - source:
         type: resource-watcher
