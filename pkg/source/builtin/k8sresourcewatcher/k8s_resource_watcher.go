@@ -22,7 +22,14 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubevela/kube-trigger/api/v1alpha1"
 	"github.com/kubevela/kube-trigger/pkg/eventhandler"
@@ -87,12 +94,70 @@ func (w *K8sResourceWatcher) Init(properties *runtime.RawExtension, eh eventhand
 
 func (w *K8sResourceWatcher) Run(ctx context.Context) error {
 	for k, config := range w.configs {
-		go func(c *types.Config, handlers []eventhandler.EventHandler) {
-			resourceController := controller.Setup(*c, handlers)
-			resourceController.Run(ctx.Done())
-		}(config, w.eventHandlers[k])
+		configs, err := getConfigFromSecret(ctx, config.Clusters)
+		if err != nil {
+			return err
+		}
+		for _, kubeConfig := range configs {
+			go func(kube *rest.Config, c *types.Config, handlers []eventhandler.EventHandler) {
+				resourceController := controller.Setup(ctx, kube, *c, handlers)
+				resourceController.Run(ctx.Done())
+			}(kubeConfig, config, w.eventHandlers[k])
+		}
 	}
 	return nil
+}
+
+func getConfigFromSecret(ctx context.Context, clusters []string) ([]*rest.Config, error) {
+	configs := make([]*rest.Config, 0)
+	config := ctrl.GetConfigOrDie()
+	cli, err := client.New(config, client.Options{Scheme: scheme.Scheme})
+	if err != nil {
+		return nil, err
+	}
+	if len(clusters) == 0 {
+		req, err := labels.NewRequirement("cluster.core.oam.dev/cluster-credential-type", selection.Exists, nil)
+		if err != nil {
+			return nil, err
+		}
+		secrets := &corev1.SecretList{}
+		if err := cli.List(ctx, secrets, client.MatchingLabelsSelector{labels.NewSelector().Add(*req)}); err != nil {
+			return nil, err
+		}
+		for _, secret := range secrets.Items {
+			configs = append(configs, generateRestConfig(&secret))
+		}
+		configs = append(configs, config)
+		return configs, nil
+	}
+	for _, cluster := range clusters {
+		if cluster == "local" {
+			configs = append(configs, config)
+			continue
+		}
+		secret := &corev1.Secret{}
+		if err := cli.Get(ctx, client.ObjectKey{Name: cluster, Namespace: "vela-system"}, secret); err != nil {
+			return nil, err
+		}
+		configs = append(configs, generateRestConfig(secret))
+	}
+	return configs, nil
+}
+
+func generateRestConfig(secret *corev1.Secret) *rest.Config {
+	c := &rest.Config{
+		Host: string(secret.Data["endpoint"]),
+		TLSClientConfig: rest.TLSClientConfig{
+			KeyData:  secret.Data["tls.key"],
+			CertData: secret.Data["tls.crt"],
+		},
+	}
+	if ca, ok := secret.Data["ca.crt"]; ok {
+		c.TLSClientConfig.CAData = ca
+	} else {
+		c.Insecure = true
+	}
+	return c
 }
 
 func (w *K8sResourceWatcher) Type() string {
